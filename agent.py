@@ -48,26 +48,34 @@ async def run_agent(prompt: str, verbose: bool = False) -> str:
     """S&P 500 分析エージェントを実行"""
     result_text = ""
 
-    async for message in query(
-        prompt=prompt,
-        options=ClaudeAgentOptions(
-            cwd=str(BASE_DIR),
-            model="claude-opus-4-6",
-            system_prompt=SYSTEM_PROMPT,
-            allowed_tools=["WebSearch", "WebFetch", "Bash", "Read", "Glob"],
-            permission_mode="acceptEdits",
-            max_turns=20,
-            thinking={"type": "adaptive"},
-        ),
-    ):
-        if isinstance(message, SystemMessage):
-            if verbose and message.subtype == "init":
-                session_id = message.data.get("session_id", "")
-                print(f"[セッション開始] ID: {session_id}", flush=True)
-        elif isinstance(message, ResultMessage):
-            result_text = message.result
-            if verbose:
-                print(f"\n[完了] stop_reason: {message.stop_reason}", flush=True)
+    try:
+        async for message in query(
+            prompt=prompt,
+            options=ClaudeAgentOptions(
+                cwd=str(BASE_DIR),
+                model="claude-opus-4-6",
+                system_prompt=SYSTEM_PROMPT,
+                allowed_tools=["WebSearch", "WebFetch", "Bash", "Read", "Glob"],
+                permission_mode="acceptEdits",
+                max_turns=20,
+                thinking={"type": "adaptive"},
+            ),
+        ):
+            if isinstance(message, SystemMessage):
+                if verbose and message.subtype == "init":
+                    session_id = message.data.get("session_id", "")
+                    print(f"[セッション開始] ID: {session_id}", flush=True)
+            elif isinstance(message, ResultMessage):
+                result_text = message.result
+                if verbose:
+                    print(f"\n[完了] stop_reason: {message.stop_reason}", flush=True)
+                break  # 結果取得後はループを抜ける
+    except Exception as e:
+        if result_text:
+            # 結果が取得できていれば後続エラーは無視
+            pass
+        else:
+            raise e
 
     return result_text
 
